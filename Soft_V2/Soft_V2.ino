@@ -1,4 +1,4 @@
-#define DECODE_NEC
+#define DECODE_NEC //:)
 #define DECODE_RC5
 #define NO_LED_FEEDBACK_CODE 
 #include <IRremote.hpp>
