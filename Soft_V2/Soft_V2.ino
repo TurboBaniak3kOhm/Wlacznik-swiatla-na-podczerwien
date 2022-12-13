@@ -1,7 +1,8 @@
-#define DECODE_NEC //:)
+#define DECODE_NEC 
 #define DECODE_RC5
 #define NO_LED_FEEDBACK_CODE 
 #include <IRremote.hpp>
+#include <EEPROM.h>
 
 int state1=0;
 int state2=0;
