@@ -1,58 +1,105 @@
 #define DECODE_NEC
-#define DECODE_RC5
 #define NO_LED_FEEDBACK_CODE
 #include <IRremote.hpp>
 #include <EEPROM.h>
 
-int state1 = 0;
-int state2 = 0;
-int IR_RECEIVE_PIN = 6;
-int ch1 = 4;
-int ch2 = 5;
+int state1, state2, state3, state4;
+int IR_RECEIVE_PIN = 0;
+int LED_PIN = 19;
+int ch1 = 17;
+int ch2 = 16;
+int ch3 = 15;
+int ch4 = 14;
+int button1 = 18;
+int button2 = 9;
+int button3 = 8;
+int button4 = 7;
+uint32_t code1, code2, code3, code4;
 
+//zapis kodu do pamięci (adres + dane)
 char writeCode(uint8_t addr, uint32_t data) {
-  EEPROM.write(addr, data);
-  data >> 8;
-  EEPROM.write(addr + 1, data);
-  data >> 8;
-  EEPROM.write(addr + 2, data);
-  data >> 8;
   EEPROM.write(addr + 3, data);
+  data = data >> 8;
+  EEPROM.write(addr + 2, data);
+  data = data >> 8;
+  EEPROM.write(addr + 1, data);
+  data = data >> 8;
+  EEPROM.write(addr, data);
 }
 
 uint32_t readCode(uint8_t addr) {
   uint32_t data = 0;
 
-  data += EEPROM.read(addr + 3);
-  data = data << 8;
-  data += EEPROM.read(addr + 2);
+  data += EEPROM.read(addr);
   data = data << 8;
   data += EEPROM.read(addr + 1);
   data = data << 8;
-  data += EEPROM.read(addr);
+  data += EEPROM.read(addr + 2);
+  data = data << 8;
+  data += EEPROM.read(addr + 3);
   return data;
 }
 
 void setup() {
-  Serial.begin(9600);
-  IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);  // Start the receiver
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+
+  IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);
   pinMode(ch1, OUTPUT);
   pinMode(ch2, OUTPUT);
-  writeCode(0, 0x01234567);
-  uint32_t bufor = readCode(0);
-  Serial.println((uint8_t)bufor);
+  pinMode(ch3, OUTPUT);
+  pinMode(ch4, OUTPUT);
+  code1 = readCode(0);
+  code2 = readCode(4);
+  code3 = readCode(8);
+  code4 = readCode(12);
+
+  pinMode(button1, INPUT_PULLUP);
+  pinMode(button2, INPUT_PULLUP);
+  pinMode(button3, INPUT_PULLUP);
+  pinMode(button4, INPUT_PULLUP);
 }
 
 void loop() {
   if (IrReceiver.decode()) {
+
     uint32_t kod = IrReceiver.decodedIRData.decodedRawData;
-    if (!kod) {
-      IrReceiver.resume();  // Receive the next value
+    if (kod == 0) {
+      IrReceiver.resume();
       return;
     }
-    Serial.println(kod, HEX);
-    //ch1--------------------------------
-    if (kod == 0xBA45FF00) {
+
+    if (digitalRead(button1) == LOW) {
+      code1 = kod;
+      writeCode(0, code1);
+      digitalWrite(LED_PIN, HIGH);
+      IrReceiver.resume();
+      return;
+    }
+    if (digitalRead(button2) == LOW) {
+      code2 = kod;
+      writeCode(4, code2);
+      digitalWrite(LED_PIN, HIGH);
+      IrReceiver.resume();
+      return;
+    }
+    if (digitalRead(button3) == LOW) {
+      code3 = kod;
+      writeCode(8, code3);
+      digitalWrite(LED_PIN, HIGH);
+      IrReceiver.resume();
+      return;
+    }
+    if (digitalRead(button4) == LOW) {
+      code4 = kod;
+      writeCode(12, code4);
+      digitalWrite(LED_PIN, HIGH);
+      IrReceiver.resume();
+      return;
+    }
+    digitalWrite(LED_PIN, LOW);
+
+    if (kod == code1) {
       if (state1 == 0) {
         digitalWrite(ch1, HIGH);
         state1 = 1;
@@ -61,8 +108,7 @@ void loop() {
         state1 = 0;
       }
     }
-    //ch2-------------------------------
-    if (kod == 0xB946FF00) {
+    if (kod == code2) {
       if (state2 == 0) {
         digitalWrite(ch2, HIGH);
         state2 = 1;
@@ -71,7 +117,25 @@ void loop() {
         state2 = 0;
       }
     }
-    IrReceiver.resume();  // Receive the next value
+    if (kod == code3) {
+      if (state3 == 0) {
+        digitalWrite(ch3, HIGH);
+        state3 = 1;
+      } else {
+        digitalWrite(ch3, LOW);
+        state3 = 0;
+      }
+    }
+    if (kod == code4) {
+      if (state4 == 0) {
+        digitalWrite(ch4, HIGH);
+        state4 = 1;
+      } else {
+        digitalWrite(ch4, LOW);
+        state4 = 0;
+      }
+    }
+
+    IrReceiver.resume();
   }
-  delay(100);
 }
